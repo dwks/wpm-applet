@@ -48,6 +48,7 @@ def update_code():
     UPDATE_INTERVAL = 2
     TIME_HORIZON = [60*60, 15*60, 5*60, 60, 10]
     HORIZON_NAME = ["1h", "15m", "5m", "1m", "10s"]
+    max_10s = 0
     while True:
         time.sleep(UPDATE_INTERVAL)
         now = get_bucket(time.time())
@@ -59,6 +60,9 @@ def update_code():
                 #window = (now - start_time + 1) if (now - t) < start_time else t
                 window = t
                 rate = total * 1.0 / window * 60
+                max_10s = max(max_10s, rate)
+                if(horizon + 1 == len(TIME_HORIZON)):
+                    print "MAX %5.1f/min," % (max_10s),
                 print "%5.1f/min @%s (%4d), " % (rate, HORIZON_NAME[horizon], total),
                 horizon -= 1
                 continue
