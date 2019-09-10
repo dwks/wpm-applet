@@ -4,6 +4,7 @@ import json
 import subprocess
 from threading import Thread
 import time
+from collections import defaultdict
 
 
 from urllib2 import Request, urlopen, URLError
@@ -30,40 +31,67 @@ def main():
 
 def build_menu():
     menu = gtk.Menu()
-    item_joke = gtk.MenuItem('Joke')
-    item_joke.connect('activate', joke)
-    menu.append(item_joke)
     item_quit = gtk.MenuItem('Quit')
     item_quit.connect('activate', quit)
     menu.append(item_quit)
     menu.show_all()
     return menu
 
-def fetch_joke():
-    request = Request('http://api.icndb.com/jokes/random?limitTo=[nerdy]')
-    response = urlopen(request)
-    joke = json.loads(response.read())['value']['joke']
-    return joke
-
-def joke(_):
-    notify.Notification.new("<b>Joke</b>", fetch_joke(), None).show()
-
 def quit(_):
     notify.uninit()
     gtk.main_quit()
 
+count = defaultdict(lambda : 0)
+
+def get_bucket(t):
+    return int(round(t))
+
+def update_code():
+    global count
+    start_time = get_bucket(time.time())
+    UPDATE_INTERVAL = 2
+    TIME_HORIZON = [60*60, 15*60, 5*60, 60, 10]
+    HORIZON_NAME = ["1h", "15m", "5m", "1m", "10s"]
+    while True:
+        time.sleep(UPDATE_INTERVAL)
+        now = get_bucket(time.time())
+        total = 0
+        horizon = len(TIME_HORIZON) - 1
+        t = 0
+        while horizon >= 0:
+            if(t == TIME_HORIZON[horizon]):
+                #window = (now - start_time + 1) if (now - t) < start_time else t
+                window = t
+                rate = total * 1.0 / window * 60
+                print "%5.1f/min @%s (%4d), " % (rate, HORIZON_NAME[horizon], total),
+                horizon -= 1
+                continue
+            c = count[now - t]
+            total += c
+            t += 1
+        print ""
+        for tt in range(1, UPDATE_INTERVAL + 10):
+            count.pop(now - t - tt, 0)  # erase element if it exists
+
+def update_thread():
+    thread = Thread(target = update_code)
+    thread.setDaemon(True)
+    thread.start()
+
 def listen_code():
+    global count
     print("xinput pipe opening")
     xinput = subprocess.Popen(["/usr/bin/xinput", "test", 'Lite-On Goldtouch USB Keyboard'],
         stdout=subprocess.PIPE)
     while True:
         line = xinput.stdout.readline()
         if not line: break
-        
+
         col = line.split()
         if(len(col) == 3 and col[1] == 'press'):
             t = time.time()
-            print t, col[2]
+            #print t, col[2]
+            count[get_bucket(t)] += 1
     print("xinput pipe closed")
 
 def listen_thread():
@@ -76,4 +104,5 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     gobject.threads_init()
     listen_thread()
+    update_thread()
     main()
