@@ -1,13 +1,9 @@
 #!/usr/bin/python2
 import signal
-import json
 import subprocess
-from threading import Thread
 import time
+from threading import Thread
 from collections import defaultdict
-
-
-from urllib2 import Request, urlopen, URLError
 
 import gi
 gi.require_version('Gtk', '3.0')
