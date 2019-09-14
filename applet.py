@@ -20,7 +20,7 @@ class AppletIcon:
         self.indicator = gtk.StatusIcon()
         self.indicator.set_from_stock(gtk.STOCK_INFO)
         self.indicator.set_has_tooltip(True)
-        self.indicator.set_tooltip_text("testing")
+        self.indicator.set_tooltip_text("collecting data...")
         self.indicator.connect('popup-menu', self.on_popup)
         self.menu = self.build_menu()
 
@@ -35,13 +35,19 @@ class AppletIcon:
     def on_popup(self, icon, button, time):
         self.menu.popup(None, None, gtk.StatusIcon.position_menu, icon, button, time)
 
+    def set_text(self, text):
+        self.indicator.set_tooltip_text(text)
+
     def quit(self, _):
         notify.uninit()
         gtk.main_quit()
 
 
 def main():
+    keyRecorder = KeyRecorder()
     appletIcon = AppletIcon()
+    keyRecorder.connect("statistics", lambda obj, text: appletIcon.set_text(text))
+    keyRecorder.start()
     gtk.main()
 
 class DaemonThread:
@@ -51,10 +57,15 @@ class DaemonThread:
     def start(self):
         self.thread.start()
 
-class KeyRecorder:
+class KeyRecorder(gobject.GObject):
+    __gsignals__ = {
+        'statistics': (gobject.SIGNAL_RUN_FIRST, None, (str,))
+    }
+
     count = defaultdict(lambda : 0)
 
     def __init__(self):
+        gobject.GObject.__init__(self)
         self.listen_thread = DaemonThread(self.listen_code, "listen-thread")
         self.update_thread = DaemonThread(self.update_code, "update-thread")
 
@@ -77,6 +88,7 @@ class KeyRecorder:
             total = 0
             horizon = len(TIME_HORIZON) - 1
             t = 0
+            output = ''
             while horizon >= 0:
                 if(t == TIME_HORIZON[horizon]):
                     #window = (now - start_time + 1) if (now - t) < start_time else t
@@ -85,13 +97,17 @@ class KeyRecorder:
                     max_10s = max(max_10s, rate)
                     if(horizon + 1 == len(TIME_HORIZON)):
                         print "MAX %5.1f/min," % (max_10s),
+                        output += "%5.1f/min MAX\n" % (max_10s)
                     print "%5.1f/min @%s (%4d), " % (rate, HORIZON_NAME[horizon], total),
+                    output += "%5.1f/min @%-3s (%4d)\n" % (rate, HORIZON_NAME[horizon], total)
                     horizon -= 1
                     continue
                 c = self.count[now - t]
                 total += c
                 t += 1
             print ""
+            output = output.rstrip()
+            self.emit("statistics", output)
             for tt in range(1, UPDATE_INTERVAL + 10):
                 self.count.pop(now - t - tt, 0)  # erase element if it exists
 
@@ -113,5 +129,4 @@ class KeyRecorder:
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     gobject.threads_init()
-    KeyRecorder().start()
     main()
