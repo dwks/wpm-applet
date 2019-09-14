@@ -112,9 +112,10 @@ class KeyRecorder(gobject.GObject):
                 self.count.pop(now - t - tt, 0)  # erase element if it exists
 
     def listen_code(self):
-        print("xinput pipe opening")
-        xinput = subprocess.Popen(["/usr/bin/xinput", "test", 'Lite-On Goldtouch USB Keyboard'],
+        KEYBOARD_NAME = 'Lite-On Goldtouch USB Keyboard'  # run xinput to determine this
+        xinput = subprocess.Popen(["/usr/bin/xinput", "test", KEYBOARD_NAME],
             stdout=subprocess.PIPE)
+        print("xinput pipe open, listening for keys from '" + KEYBOARD_NAME + "'")
         while True:
             line = xinput.stdout.readline()
             if not line: break
@@ -124,7 +125,6 @@ class KeyRecorder(gobject.GObject):
                 t = time.time()
                 #print t, col[2]
                 self.count[self.get_bucket(t)] += 1
-        print("xinput pipe closed")
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
