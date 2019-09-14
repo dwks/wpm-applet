@@ -7,47 +7,42 @@ from collections import defaultdict
 
 import gi
 gi.require_version('Gtk', '3.0')
-gi.require_version('AppIndicator3', '0.1')
 gi.require_version('Notify', '0.7')
 from gi.repository import Gtk as gtk
-#from gi.repository import AppIndicator3 as appindicator
 from gi.repository import Notify as notify
 from gi.repository import GObject as gobject
 
-APPINDICATOR_ID = 'wpm-x11'
-menu = None
+class AppletIcon:
+    APPINDICATOR_ID = 'wpm-x11'
+    menu = None
+
+    def __init__(self):
+        self.indicator = gtk.StatusIcon()
+        self.indicator.set_from_stock(gtk.STOCK_INFO)
+        self.indicator.set_has_tooltip(True)
+        self.indicator.set_tooltip_text("testing")
+        self.indicator.connect('popup-menu', self.on_popup)
+        self.menu = self.build_menu()
+
+    def build_menu(self):
+        menu = gtk.Menu()
+        item_quit = gtk.MenuItem('Quit')
+        item_quit.connect('activate', self.quit)
+        menu.append(item_quit)
+        menu.show_all()
+        return menu
+
+    def on_popup(self, icon, button, time):
+        self.menu.popup(None, None, gtk.StatusIcon.position_menu, icon, button, time)
+
+    def quit(self, _):
+        notify.uninit()
+        gtk.main_quit()
+
 
 def main():
-    #indicator = appindicator.Indicator.new(APPINDICATOR_ID, gtk.STOCK_INFO, appindicator.IndicatorCategory.SYSTEM_SERVICES)
-    #indicator.set_status(appindicator.IndicatorStatus.ACTIVE)
-    #indicator.set_label("text", "widest text")
-    #indicator.set_menu(build_menu())
-    #notify.init(APPINDICATOR_ID)
-    indicator = gtk.StatusIcon()
-    indicator.set_from_stock(gtk.STOCK_INFO)
-    indicator.set_has_tooltip(True)
-    indicator.set_tooltip_text("testing")
-    indicator.connect('popup-menu', on_popup)
-    global menu
-    menu = build_menu()
-
+    appletIcon = AppletIcon()
     gtk.main()
-
-def on_popup(icon, button, time):
-    global menu
-    menu.popup(None, None, gtk.StatusIcon.position_menu, icon, button, time)
-
-def build_menu():
-    menu = gtk.Menu()
-    item_quit = gtk.MenuItem('Quit')
-    item_quit.connect('activate', quit)
-    menu.append(item_quit)
-    menu.show_all()
-    return menu
-
-def quit(_):
-    notify.uninit()
-    gtk.main_quit()
 
 count = defaultdict(lambda : 0)
 
@@ -111,10 +106,16 @@ def listen_thread():
     thread.setDaemon(True)
     thread.start()
 
+class DaemonThread:
+    def __init__(self, code, threadName = None):
+        self.thread = Thread(target = code, name = threadName)
+        self.thread.setDaemon(True)
+    def start(self):
+        self.thread.start()
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     gobject.threads_init()
-    listen_thread()
-    update_thread()
+    DaemonThread(listen_code, "listen-thread").start()
+    DaemonThread(update_code, "update-thread").start()
     main()
