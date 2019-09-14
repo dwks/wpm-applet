@@ -10,20 +10,32 @@ gi.require_version('Gtk', '3.0')
 gi.require_version('AppIndicator3', '0.1')
 gi.require_version('Notify', '0.7')
 from gi.repository import Gtk as gtk
-from gi.repository import AppIndicator3 as appindicator
+#from gi.repository import AppIndicator3 as appindicator
 from gi.repository import Notify as notify
 from gi.repository import GObject as gobject
 
-
 APPINDICATOR_ID = 'wpm-x11'
+menu = None
 
 def main():
-    indicator = appindicator.Indicator.new(APPINDICATOR_ID, gtk.STOCK_INFO, appindicator.IndicatorCategory.SYSTEM_SERVICES)
-    indicator.set_status(appindicator.IndicatorStatus.ACTIVE)
-    indicator.set_label("text", "widest text")
-    indicator.set_menu(build_menu())
-    notify.init(APPINDICATOR_ID)
+    #indicator = appindicator.Indicator.new(APPINDICATOR_ID, gtk.STOCK_INFO, appindicator.IndicatorCategory.SYSTEM_SERVICES)
+    #indicator.set_status(appindicator.IndicatorStatus.ACTIVE)
+    #indicator.set_label("text", "widest text")
+    #indicator.set_menu(build_menu())
+    #notify.init(APPINDICATOR_ID)
+    indicator = gtk.StatusIcon()
+    indicator.set_from_stock(gtk.STOCK_INFO)
+    indicator.set_has_tooltip(True)
+    indicator.set_tooltip_text("testing")
+    indicator.connect('popup-menu', on_popup)
+    global menu
+    menu = build_menu()
+
     gtk.main()
+
+def on_popup(icon, button, time):
+    global menu
+    menu.popup(None, None, gtk.StatusIcon.position_menu, icon, button, time)
 
 def build_menu():
     menu = gtk.Menu()
