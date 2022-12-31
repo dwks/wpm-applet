@@ -96,35 +96,42 @@ class KeyRecorder(gobject.GObject):
                     rate = total * 1.0 / window * 60
                     max_10s = max(max_10s, rate)
                     if(horizon + 1 == len(TIME_HORIZON)):
-                        print "MAX %5.1f/min," % (max_10s),
+                        print("MAX %5.1f/min," % (max_10s), end='')
                         output += "%5.1f/min MAX\n" % (max_10s)
-                    print "%5.1f/min @%s (%4d), " % (rate, HORIZON_NAME[horizon], total),
+                    print("%5.1f/min @%s (%4d), " % (rate, HORIZON_NAME[horizon], total), end='')
                     output += "%5.1f/min @%-3s (%4d)\n" % (rate, HORIZON_NAME[horizon], total)
                     horizon -= 1
                     continue
                 c = self.count[now - t]
                 total += c
                 t += 1
-            print ""
+            print("")
             output = output.rstrip()
             self.emit("statistics", output)
             for tt in range(1, UPDATE_INTERVAL + 10):
                 self.count.pop(now - t - tt, 0)  # erase element if it exists
 
     def listen_code(self):
-        KEYBOARD_NAME = 'Lite-On Goldtouch USB Keyboard'  # run xinput to determine this
-        xinput = subprocess.Popen(["/usr/bin/xinput", "test", KEYBOARD_NAME],
-            stdout=subprocess.PIPE)
-        print("xinput pipe open, listening for keys from '" + KEYBOARD_NAME + "'")
         while True:
-            line = xinput.stdout.readline()
-            if not line: break
+            #KEYBOARD_NAME = 'Lite-On Goldtouch USB Keyboard'  # run xinput to determine this
+            #KEYBOARD_NAME = 'Lite-On Technology Corp. Goldtouch USB Keyboard'  # run xinput to determine this
+            KEYBOARD_NAME = "11"
+            #KEYBOARD_NAME = 'Topre REALFORCE 87 US'  # run xinput to determine this
+            KEYBOARD_NAME = subprocess.check_output(["/bin/bash", "-c", "/usr/bin/xinput | perl -ne 'if(/Lite-On Technology Corp. Goldtouch USB Keyboard\s+id=(\d+)/) { print \"$1\"; exit }'"]).decode("utf-8")
 
-            col = line.split()
-            if(len(col) == 3 and col[1] == 'press'):
-                t = time.time()
-                #print t, col[2]
-                self.count[self.get_bucket(t)] += 1
+            xinput = subprocess.Popen(["/usr/bin/xinput", "test", KEYBOARD_NAME],
+                stdout=subprocess.PIPE)
+            print("xinput pipe open, listening for keys from '" + KEYBOARD_NAME + "'")
+            while True:
+                line = xinput.stdout.readline()
+                if not line: break
+
+                col = line.split()
+                if(len(col) == 3 and col[1] == b'press'):
+                    t = time.time()
+                    #print(t, col[2])
+                    self.count[self.get_bucket(t)] += 1
+            time.sleep(1)
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
