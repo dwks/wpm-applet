@@ -79,8 +79,8 @@ class KeyRecorder(gobject.GObject):
     def update_code(self):
         start_time = self.get_bucket(time.time())
         UPDATE_INTERVAL = 2
-        TIME_HORIZON = [60*60, 15*60, 5*60, 60, 10]
-        HORIZON_NAME = ["1h", "15m", "5m", "1m", "10s"]
+        TIME_HORIZON = [18*60*60,12*60*60, 6*60*60, 60*60, 15*60, 5*60, 60, 10]
+        HORIZON_NAME = ["18h", "12h", "6h", "1h", "15m", "5m", "1m", "10s"]
         max_10s = 0
         while True:
             time.sleep(UPDATE_INTERVAL)
